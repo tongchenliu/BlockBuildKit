@@ -5,7 +5,7 @@
 A Minecraft-style build mode for Unreal Engine, made for people who are new to Unreal.
 Walk around your level in **Play**, snap meshes together on a grid, and when you are happy, **bake** the result into the level as normal actors. No need to learn the level editor's gizmos first.
 
-> Status: beta (0.1.0). Developed with Unreal Engine 5.8. It is a C++ plugin, so the first time you open a project with it, Unreal compiles it (you need Visual Studio with the "Game development with C++" workload).
+> Status: beta (0.2.0). Developed with Unreal Engine 5.8. It is a C++ plugin, so the first time you open a project with it, Unreal compiles it (you need Visual Studio with the "Game development with C++" workload).
 
 ## Quick start
 
@@ -57,6 +57,7 @@ Your build is saved automatically (SaveGame slot `BlockBuild`) and comes back ev
 - **Save Slot Name**: default `BlockBuild`
 - **Piece Folders**: default `/Game/BuildPieces`
 - **Include Basic Shapes**: Cube, Plane, Cylinder, Cone, Sphere from the engine
+- **Record build sessions (local only)**: off by default, see "Share your build"
 
 ## Notes
 
@@ -64,6 +65,16 @@ Your build is saved automatically (SaveGame slot `BlockBuild`) and comes back ev
 - **Packaged games:** add your piece folders to **Project Settings → Packaging → Additional Asset Directories to Cook**, otherwise they are not in the build.
 - **Console:** `blockbuild export <name>` writes the build to `Saved/BlockBuild/<name>.json`; `blockbuild clear` empties it; `blockbuild.bake` (editor) is the same as the Tools menu entry. **Tools → Block Build Kit → Clear saved build** starts over.
 - **Bought assets (Fab etc.):** you can use them with the kit in your own project, but don't upload them to a public repository. Most store licenses don't allow redistributing the asset files.
+
+## Share your build (optional)
+
+Want to help build an open dataset of how people build places? Nothing is ever uploaded automatically.
+
+1. Optional: turn on **Project Settings → Plugins → Block Build Kit → Sharing → Record build sessions (local only)**. The status line shows **REC** while it records your steps (on your computer only).
+2. In the editor, choose **Tools → Block Build Kit → Export build for sharing**. You get one `.json` file with piece names, sizes, positions and your recorded steps. No user name, computer name or model files.
+3. Post it with the **[Share your build](https://github.com/tongchenliu/BlockBuildKit/issues/new?template=share-build.yml)** form (the export notification has a link). Shared files are public and released under CC0 1.0, and may be used to train AI that helps build worlds.
+
+Details, file format and the download script: [DATA.md](DATA.md).
 
 ## License
 

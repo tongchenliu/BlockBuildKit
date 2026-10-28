@@ -6,6 +6,8 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AssetRegistry/ARFilter.h"
+#include "Interfaces/IPluginManager.h"
+#include "Misc/EngineVersion.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
@@ -62,6 +64,27 @@ static FKey BBToggleKey()
 {
 	const UBlockBuildSettings* S = BBSettings();
 	return (S && S->ToggleKey.IsValid()) ? S->ToggleKey : EKeys::F;
+}
+static FString BBPluginVersion()
+{
+	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("BlockBuildKit"));
+	return Plugin.IsValid() ? Plugin->GetDescriptor().VersionName : FString(TEXT("unknown"));
+}
+static TArray<TSharedPtr<FJsonValue>> BBVec(const FVector& V)
+{
+	TArray<TSharedPtr<FJsonValue>> A;
+	A.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(V.X * 10.0) / 10.0));
+	A.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(V.Y * 10.0) / 10.0));
+	A.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(V.Z * 10.0) / 10.0));
+	return A;
+}
+static TSharedPtr<FJsonObject> BBPieceJson(const FString& Mesh, const FTransform& T)
+{
+	TSharedPtr<FJsonObject> O = MakeShared<FJsonObject>();
+	O->SetStringField(TEXT("mesh"), Mesh);
+	O->SetArrayField(TEXT("loc"), BBVec(T.GetLocation()));
+	O->SetNumberField(TEXT("yaw"), FMath::RoundToDouble(T.Rotator().Yaw * 10.0) / 10.0);
+	return O;
 }
 static FString BBHelpLine()
 {
@@ -214,6 +237,7 @@ void UBlockBuildSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	Hotbar.Init(TEXT(""), GBBHotbarSlots);
+	MapName = UWorld::RemovePIEPrefix(InWorld.GetMapName());
 	// the piece list is scanned the first time build mode is turned on (BuildCatalogIfNeeded), so worlds that never build pay nothing
 	LoadSave();
 	RebuildAll();
@@ -226,6 +250,7 @@ void UBlockBuildSubsystem::Deinitialize()
 	{
 		WriteSave();
 	}
+	FlushSession();
 	RemoveWidgets();
 	Super::Deinitialize();
 }
@@ -578,6 +603,11 @@ void UBlockBuildSubsystem::SetActive(bool bOn)
 		BuildCatalogIfNeeded();
 	}
 	bActive = bOn;
+	{
+		TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+		E->SetBoolField(TEXT("on"), bActive);
+		Rec(TEXT("mode"), E);
+	}
 	if (!bActive && bInventoryOpen)
 	{
 		CloseInventory();
@@ -652,6 +682,13 @@ void UBlockBuildSubsystem::CloseInventory()
 void UBlockBuildSubsystem::SelectSlot(int32 InSlot)
 {
 	Slot = ((InSlot % GBBHotbarSlots) + GBBHotbarSlots) % GBBHotbarSlots;
+	if (bActive)
+	{
+		TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+		E->SetNumberField(TEXT("slot"), Slot + 1);
+		E->SetStringField(TEXT("mesh"), Hotbar.IsValidIndex(Slot) ? Hotbar[Slot] : FString());
+		Rec(TEXT("slot"), E);
+	}
 	RefreshHotbar();
 }
 
@@ -723,31 +760,37 @@ void UBlockBuildSubsystem::Tick(float DeltaTime)
 	{
 		Yaw = FMath::Fmod(Yaw - 45.f + 360.f, 360.f);
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("yaw"), TEXT("yaw"), Yaw);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::E))
 	{
 		Yaw = FMath::Fmod(Yaw + 45.f, 360.f);
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("yaw"), TEXT("yaw"), Yaw);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::C))
 	{
 		GridIndex = (GridIndex + 1) % GBBNumGrid;
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("grid"), TEXT("cm"), GBBGridSteps[GridIndex]);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::PageUp))
 	{
 		ZOffset += 25.f;
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("height"), TEXT("z"), ZOffset);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::PageDown))
 	{
 		ZOffset -= 25.f;
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("height"), TEXT("z"), ZOffset);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::Home))
 	{
 		ZOffset = 0.f;
 		RefreshStatus(TEXT(""));
+		RecNum(TEXT("height"), TEXT("z"), ZOffset);
 	}
 	if (PC->WasInputKeyJustPressed(EKeys::Z))
 	{
@@ -756,6 +799,7 @@ void UBlockBuildSubsystem::Tick(float DeltaTime)
 	if (PC->WasInputKeyJustPressed(EKeys::N))
 	{
 		bEdgeSnap = !bEdgeSnap;
+		RecNum(TEXT("snap"), TEXT("on"), bEdgeSnap ? 1.0 : 0.0);
 		RefreshStatus(bEdgeSnap ? BBT(TEXT("Edge snap: on"), TEXT("贴边吸附：开")) : BBT(TEXT("Edge snap: off"), TEXT("贴边吸附：关")));
 	}
 
@@ -986,6 +1030,11 @@ void UBlockBuildSubsystem::Place()
 	P.Transform = GhostTransform;
 	Pieces.Add(P);
 	PieceComps.Add(SpawnPieceComponent(P));
+	{
+		TSharedPtr<FJsonObject> E = BBPieceJson(P.MeshPath, P.Transform);
+		E->SetNumberField(TEXT("piece"), Pieces.Num() - 1);
+		Rec(TEXT("place"), E);
+	}
 	bSaveDirty = true;
 	LastSaveRequest = FPlatformTime::Seconds();
 	RefreshStatus(FString::Printf(TEXT("%s %s"), *BBT(TEXT("Placed"), TEXT("放置")), *Item->Name));
@@ -1013,6 +1062,11 @@ void UBlockBuildSubsystem::RemoveAimed(APlayerController* PC)
 		RefreshStatus(BBT(TEXT("You can only remove pieces you built"), TEXT("只能拆除自己搭建的物件")));
 		return;
 	}
+	{
+		TSharedPtr<FJsonObject> E = BBPieceJson(Pieces[Idx].MeshPath, Pieces[Idx].Transform);
+		E->SetNumberField(TEXT("piece"), Idx);
+		Rec(TEXT("remove"), E);
+	}
 	C->DestroyComponent();
 	PieceComps.RemoveAt(Idx);
 	Pieces.RemoveAt(Idx);
@@ -1035,6 +1089,11 @@ void UBlockBuildSubsystem::Undo()
 	if (PieceComps.IsValidIndex(Idx))
 	{
 		PieceComps.RemoveAt(Idx);
+	}
+	{
+		TSharedPtr<FJsonObject> E = BBPieceJson(Pieces[Idx].MeshPath, Pieces[Idx].Transform);
+		E->SetNumberField(TEXT("piece"), Idx);
+		Rec(TEXT("undo"), E);
 	}
 	Pieces.RemoveAt(Idx);
 	bSaveDirty = true;
@@ -1238,6 +1297,13 @@ void UBlockBuildSubsystem::RefreshStatus(const FString& Extra)
 			It ? *It->Name : TEXT("(空格)"), Yaw, GBBGridSteps[GridIndex], bEdgeSnap ? TEXT("开") : TEXT("关"), ZOffset, Pieces.Num())
 		: FString::Printf(TEXT("%s   yaw %.0f°   grid %.0fcm   edge snap (N) %s   height %+.0fcm   built %d"),
 			It ? *It->Name : TEXT("(empty)"), Yaw, GBBGridSteps[GridIndex], bEdgeSnap ? TEXT("on") : TEXT("off"), ZOffset, Pieces.Num());
+	if (const UBlockBuildSettings* RecSettings = BBSettings())
+	{
+		if (RecSettings->bRecordSessions)
+		{
+			S += BBZh() ? TEXT("   ● 录制中") : TEXT("   ● REC");
+		}
+	}
 	if (!Extra.IsEmpty())
 	{
 		S += TEXT("   ·  ") + Extra;
@@ -1311,6 +1377,12 @@ void UBlockBuildSubsystem::ShowCategory(int32 CatIndex)
 						if (Catalog.IsValidIndex(I) && Hotbar.IsValidIndex(Slot))
 						{
 							Hotbar[Slot] = Catalog[I].Path;
+							{
+								TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+								E->SetNumberField(TEXT("slot"), Slot + 1);
+								E->SetStringField(TEXT("mesh"), Catalog[I].Path);
+								Rec(TEXT("pick"), E);
+							}
 							bSaveDirty = true;
 							LastSaveRequest = FPlatformTime::Seconds();
 							RefreshHotbar();
@@ -1595,6 +1667,75 @@ void UBlockBuildSubsystem::TestCategory(int32 CatIndex)
 	{
 		ShowCategory(CatIndex);
 	}
+}
+
+// ------------------------------------------------------------------ session recording ---------------------------------
+
+void UBlockBuildSubsystem::Rec(const TCHAR* Op, TSharedPtr<FJsonObject> Extra)
+{
+	const UBlockBuildSettings* S = BBSettings();
+	if (!S || !S->bRecordSessions)
+	{
+		return;
+	}
+	if (SessionStart < 0.0)
+	{
+		// a session starts with its first event; keep what was already built so the steps can be replayed from it
+		SessionStart = FPlatformTime::Seconds();
+		SessionStartUtc = FDateTime::UtcNow();
+		SessionStartPieces.Reset();
+		for (const FBlockBuildPiece& P : Pieces)
+		{
+			SessionStartPieces.Add(MakeShared<FJsonValueObject>(BBPieceJson(P.MeshPath, P.Transform)));
+		}
+	}
+	TSharedPtr<FJsonObject> E = Extra;
+	if (!E.IsValid())
+	{
+		E = MakeShared<FJsonObject>();
+	}
+	E->SetNumberField(TEXT("t"), FMath::RoundToDouble((FPlatformTime::Seconds() - SessionStart) * 100.0) / 100.0);
+	E->SetStringField(TEXT("op"), Op);
+	SessionEvents.Add(MakeShared<FJsonValueObject>(E));
+}
+
+void UBlockBuildSubsystem::RecNum(const TCHAR* Op, const TCHAR* Key, double Value)
+{
+	TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+	E->SetNumberField(Key, Value);
+	Rec(Op, E);
+}
+
+void UBlockBuildSubsystem::FlushSession()
+{
+	if (SessionEvents.Num() == 0)
+	{
+		return;
+	}
+	// no user name, computer name or absolute paths: only the level name, piece names, positions and timings
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("schema"), TEXT("blockbuildkit.session/1"));
+	Root->SetStringField(TEXT("plugin_version"), BBPluginVersion());
+	Root->SetStringField(TEXT("engine_version"), FEngineVersion::Current().ToString(EVersionComponent::Patch));
+	Root->SetStringField(TEXT("started_utc"), SessionStartUtc.ToIso8601());
+	Root->SetNumberField(TEXT("duration_s"), FMath::RoundToDouble((FPlatformTime::Seconds() - SessionStart) * 10.0) / 10.0);
+	Root->SetStringField(TEXT("level"), MapName);
+	Root->SetArrayField(TEXT("start_pieces"), SessionStartPieces);
+	Root->SetArrayField(TEXT("events"), SessionEvents);
+	Root->SetNumberField(TEXT("end_piece_count"), Pieces.Num());
+	FString Out;
+	const TSharedRef<TJsonWriter<>> W = TJsonWriterFactory<>::Create(&Out);
+	FJsonSerializer::Serialize(Root.ToSharedRef(), W);
+	const FString Dir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("BlockBuild"), TEXT("Sessions"));
+	IFileManager::Get().MakeDirectory(*Dir, true);
+	const FString File = FPaths::Combine(Dir, SessionStartUtc.ToString(TEXT("%Y-%m-%d_%H-%M-%S")) + TEXT(".json"));
+	if (FFileHelper::SaveStringToFile(Out, *File))
+	{
+		UE_LOG(LogBlockBuild, Log, TEXT("Block Build: recorded %d steps to %s"), SessionEvents.Num(), *File);
+	}
+	SessionEvents.Reset();
+	SessionStartPieces.Reset();
+	SessionStart = -1.0;
 }
 
 // ------------------------------------------------------------------ console -------------------------------------------

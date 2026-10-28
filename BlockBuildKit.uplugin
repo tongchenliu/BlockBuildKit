@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "0.1.0",
+	"Version": 2,
+	"VersionName": "0.2.0",
 	"FriendlyName": "Block Build Kit",
 	"Description": "Minecraft-style build mode for beginners: walk around in Play, snap your own meshes together on a grid, then bake the result into your level as normal actors.",
 	"Category": "Building",

@@ -46,4 +46,16 @@ public:
 	/** Also offer the engine's Cube / Plane / Cylinder / Cone / Sphere, so the kit works before you add any meshes. */
 	UPROPERTY(Config, EditAnywhere, Category = "Pieces")
 	bool bIncludeBasicShapes = true;
+
+	/**
+	 * Record how you build (place / remove / undo / rotate / grid / height, with timestamps) to Saved/BlockBuild/Sessions.
+	 * The files stay on this computer and nothing is uploaded. While it is on, the build status line shows "REC".
+	 * Tools > Block Build Kit > Export build for sharing puts them into the file you can choose to share.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Sharing", meta = (DisplayName = "Record build sessions (local only)"))
+	bool bRecordSessions = false;
+
+	/** Page opened by the "Share it" link after exporting a build for sharing. */
+	UPROPERTY(Config, EditAnywhere, Category = "Sharing")
+	FString ShareSubmitURL = TEXT("https://github.com/tongchenliu/BlockBuildKit/issues/new?template=share-build.yml");
 };

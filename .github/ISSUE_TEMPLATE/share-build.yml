@@ -1,0 +1,71 @@
+name: Share your build / 分享作品
+description: Share something you built with Block Build Kit. Shared builds are public and may be used to train AI that builds worlds. / 分享你用 Block Build Kit 搭的作品。作品会公开，并可能用于训练搭建世界的 AI。
+title: "[Build] "
+labels: ["shared-build"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Get the file:** in the Unreal Editor (not during Play) choose **Tools → Block Build Kit → Export build for sharing**. It writes `Saved/BlockBuild/Share/build_<time>.json` and opens the folder.
+        **获取文件：** 在 Unreal 编辑器里（不要在 Play 状态）点 **Tools → Block Build Kit → Export build for sharing**，会生成 `Saved/BlockBuild/Share/build_<时间>.json` 并打开所在文件夹。
+
+        The file only contains piece names, folders, sizes, positions and (if you turned recording on) your build steps with timings. No user name, computer name or model files. Open it in a text editor to check before you share.
+        文件里只有物件名称、文件夹、尺寸、位置，以及（开启录制时的）搭建步骤和时间，没有用户名、电脑名或模型文件。分享前可以用记事本打开检查。
+
+        Everything you post here is public.
+        这里提交的内容都是公开的。
+  - type: textarea
+    id: file
+    attributes:
+      label: Build file / 作品文件
+      description: Drag the build_….json file into this box. / 把 build_….json 文件拖进这个框。
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What did you build? / 你搭了什么？
+      description: One or two sentences, e.g. "a corner café with outdoor seating". AI learns what builds look like from these descriptions. / 一两句话，比如「带户外座位的街角咖啡馆」。AI 会从这些描述里学习。
+      placeholder: A small two-storey house with a fenced garden
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind / 类型
+      options:
+        - Building exterior / 建筑外观
+        - Interior / 室内
+        - Street or town / 街道或城镇
+        - Landscape or nature / 自然景观
+        - Other / 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: pieces
+    attributes:
+      label: Which pieces did you use? / 用了哪些模型？
+      multiple: true
+      options:
+        - Engine basic shapes / 引擎基础形状
+        - Free or CC0 pack / 免费或 CC0 资源包
+        - Bought pack (Fab etc.) / 购买的资源包（Fab 等）
+        - My own models / 自己做的模型
+    validations:
+      required: true
+  - type: input
+    id: packs
+    attributes:
+      label: Pack names (optional) / 资源包名称（可选）
+      placeholder: e.g. Kenney City Kit
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Consent / 同意
+      options:
+        - label: I made this build myself. / 这是我自己搭的作品。
+          required: true
+        - label: I release this build file under CC0 1.0 (public domain), and I agree it may be used to train AI models. / 我以 CC0 1.0（公共领域）发布这个作品文件，并同意它可以用于训练 AI 模型。
+          required: true
+        - label: I am 13 or older (GitHub's minimum age). / 我已满 13 岁（GitHub 的最低年龄）。
+          required: true

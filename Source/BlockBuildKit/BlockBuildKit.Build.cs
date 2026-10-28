@@ -9,6 +9,6 @@ public class BlockBuildKit : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "DeveloperSettings" });
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "Json", "AssetRegistry" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "Json", "AssetRegistry", "Projects" });
 	}
 }

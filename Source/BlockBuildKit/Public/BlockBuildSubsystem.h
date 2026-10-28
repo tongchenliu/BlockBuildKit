@@ -21,6 +21,8 @@ class SImage;
 class USceneCaptureComponent2D;
 class UTextureRenderTarget2D;
 class UTexture2D;
+class FJsonObject;
+class FJsonValue;
 struct FSlateBrush;
 
 /** One placeable static mesh: found under the piece folders set in Project Settings > Plugins > Block Build Kit, or an engine basic shape. */
@@ -148,6 +150,16 @@ private:
 	void RefreshStatus(const FString& Extra);
 	void FillInventory();
 	void ShowCategory(int32 CatIndex);
+
+	// optional session recording (settings: Record build sessions); written to Saved/BlockBuild/Sessions when the world ends
+	void Rec(const TCHAR* Op, TSharedPtr<FJsonObject> Extra = nullptr);
+	void RecNum(const TCHAR* Op, const TCHAR* Key, double Value);
+	void FlushSession();
+	TArray<TSharedPtr<FJsonValue>> SessionEvents;
+	TArray<TSharedPtr<FJsonValue>> SessionStartPieces;
+	double SessionStart = -1.0;
+	FDateTime SessionStartUtc;
+	FString MapName;
 
 	TArray<FBlockBuildItem> Catalog;
 	TArray<FString> Categories;

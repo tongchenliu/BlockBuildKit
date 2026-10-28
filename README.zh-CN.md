@@ -5,7 +5,7 @@
 一个给 Unreal Engine 新手用的「我的世界」式建造模式。
 在 **Play（运行）** 状态下直接在关卡里走动，把模型按网格一块块拼起来；满意之后一键**烘焙**进关卡，变成普通的 Actor。不用先学会编辑器里的移动/旋转手柄。
 
-> 状态：测试版（0.1.0），基于 Unreal Engine 5.8 开发。这是 C++ 插件，第一次打开项目时 Unreal 会自动编译它，需要安装 Visual Studio 并勾选「使用 C++ 的游戏开发」。
+> 状态：测试版（0.2.0），基于 Unreal Engine 5.8 开发。这是 C++ 插件，第一次打开项目时 Unreal 会自动编译它，需要安装 Visual Studio 并勾选「使用 C++ 的游戏开发」。
 
 ## 快速开始
 
@@ -57,6 +57,7 @@ Content/BuildPieces/
 - **Save Slot Name**：存档槽位名，默认 `BlockBuild`
 - **Piece Folders**：物件文件夹，默认 `/Game/BuildPieces`
 - **Include Basic Shapes**：包含引擎的立方体、平面、圆柱、圆锥、球
+- **Record build sessions (local only)**：默认关闭，见「分享你的作品」
 
 ## 注意
 
@@ -64,6 +65,16 @@ Content/BuildPieces/
 - **打包游戏**：要把物件文件夹加到 **项目设置 → 打包 → Additional Asset Directories to Cook**，否则打包后没有这些模型。
 - **控制台命令**：`blockbuild export <名字>` 把搭建内容导出到 `Saved/BlockBuild/<名字>.json`；`blockbuild clear` 清空；`blockbuild.bake`（编辑器里）等于菜单里的烘焙。**Tools → Block Build Kit → Clear saved build** 可以从头开始。
 - **买来的资源（Fab 等）**：可以在你自己的项目里配合这个插件用，但不要上传到公开仓库，大多数商店许可证不允许再分发资源文件。
+
+## 分享你的作品（可选）
+
+想帮忙建一个"真人如何搭建场景"的开放数据集吗？插件永远不会自动上传任何东西。
+
+1. 可选：打开 **项目设置 → 插件 → Block Build Kit → Sharing → Record build sessions (local only)**。录制时状态栏会显示「录制中」，搭建步骤只存在你自己的电脑上。
+2. 在编辑器里点 **Tools → Block Build Kit → Export build for sharing**，会得到一个 `.json` 文件，里面有物件名称、尺寸、位置和录下的步骤，没有用户名、电脑名或模型文件。
+3. 用 **[Share your build](https://github.com/tongchenliu/BlockBuildKit/issues/new?template=share-build.yml)** 表单提交（导出完成的提示里有链接）。分享的文件会公开，以 CC0 1.0 发布，并可能用于训练帮人搭建世界的 AI。
+
+详细说明、文件格式和下载脚本见 [DATA.md](DATA.md)。
 
 ## 许可证
 

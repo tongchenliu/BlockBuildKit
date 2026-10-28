@@ -10,7 +10,7 @@ public class BlockBuildKitEditor : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "Slate", "SlateCore", "UnrealEd", "ToolMenus", "BlockBuildKit"
+			"Core", "CoreUObject", "Engine", "Slate", "SlateCore", "UnrealEd", "ToolMenus", "Json", "Projects", "BlockBuildKit"
 		});
 	}
 }
